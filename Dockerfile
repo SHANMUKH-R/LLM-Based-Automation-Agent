@@ -1,18 +1,23 @@
-# Use a lightweight Python base image
-FROM python:3.9-slim
+FROM python:3.12-slim-bookworm
 
-# Set the working directory
-WORKDIR /LLM-Based-Automation-Agent
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
-# Copy and install dependencies separately for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Download and install uv
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
 
-# Copy the rest of the project files
-COPY . .
+# Install FastAPI and Uvicorn
+RUN pip install fastapi uvicorn
 
-# Expose the FastAPI server port
-EXPOSE 8000
+# Ensure the installed binary is on the `PATH`
+ENV PATH="/root/.local/bin:$PATH"
 
-# Run the FastAPI server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Set up the application directory
+WORKDIR /app
+
+# Copy application files
+COPY app.py /app
+
+# Explicitly set the correct binary path and use `sh -c`
+CMD ["/root/.local/bin/uv", "run", "app.py"]
